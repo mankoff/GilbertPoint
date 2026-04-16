@@ -1,0 +1,35 @@
+
+* Table of contents                               :toc_3:noexport:
+- [[#intro][Intro]]
+- [[#fetch-data][Fetch data]]
+- [[#processing][Processing]]
+
+* Intro
+
+* Fetch data
+
++ Go to https://earthexplorer.usgs.gov/,
++ Zoom in to Gilbert Point
++ Click to set pin
++ Limit date range or months if desired
++ Under "Cloud Cover", limit to 20 % or similar value
+  + Note that this is the whole scene, so even 90 % cloud cover could have clear data over Gilbert Point.
++ Change to "Data Sets" tab
++ Select Landsat > Landsat Collection 2 Level-2 [X] Landsat 8-9 OLI/TIRS C2 L2
++ Click on "Results >>" button
++ Click "Show Browse Overlay" icon (2nd from right) to preview a scene)
++ Click "Add to Bulk Download" for scenes you want to download
++ Click "View Items in Basket"
++ Click "Start Order"
++ Download files
+
+* Processing
+
+The following GRASS GIS scripts
++ Use downscaling to convert 90 m thermal band to 15 m
++ Generate some masks of land, water, and ice
++ Use masks to display a multi-colored graphic
+
+The same effect could be generated using QGIS and a mouse, Python, or many other languages.
+
+
