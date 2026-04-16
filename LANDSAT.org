@@ -2,11 +2,26 @@
 * Table of contents                               :toc_3:noexport:
 - [[#intro][Intro]]
 - [[#fetch-data][Fetch data]]
+  - [[#landsat][Landsat]]
+  - [[#notdone-alaska-coastline-near-yakutat][NOTDONE Alaska coastline near Yakutat]]
+  - [[#arcticdem][ArcticDEM]]
 - [[#processing][Processing]]
+  - [[#untar-files][Untar files]]
+  - [[#set-up-grass][Set up GRASS]]
+  - [[#import-bands][Import bands]]
+  - [[#zoom-in-to-a-few-regions-and-save-them][Zoom in to a few regions and save them]]
+  - [[#import-dem][Import DEM]]
+  - [[#notdone-downscale-pansharpen][NOTDONE Downscale (pansharpen)]]
+  - [[#enhance-rgb][Enhance RGB]]
+  - [[#display][Display]]
+  - [[#convert-to-temperature][Convert to temperature]]
+  - [[#display-1][Display]]
 
 * Intro
 
 * Fetch data
+
+** Landsat
 
 + Go to https://earthexplorer.usgs.gov/,
 + Zoom in to Gilbert Point
@@ -15,21 +30,259 @@
 + Under "Cloud Cover", limit to 20 % or similar value
   + Note that this is the whole scene, so even 90 % cloud cover could have clear data over Gilbert Point.
 + Change to "Data Sets" tab
-+ Select Landsat > Landsat Collection 2 Level-2 [X] Landsat 8-9 OLI/TIRS C2 L2
++ Select Landsat > Landsat Collection 2 Level-1 [X] Landsat 8-9 OLI/TIRS C2 L2
+  + NOTE: If you select =Landsat Collection 2 Level-2= it is pre-processed, and often the dark waters adjacent to the bright ice causes problems. We will process the images ourselves to L2 to avoid these issues.
 + Click on "Results >>" button
-+ Click "Show Browse Overlay" icon (2nd from right) to preview a scene)
-+ Click "Add to Bulk Download" for scenes you want to download
-+ Click "View Items in Basket"
-+ Click "Start Order"
-+ Download files
++ Click "Show Browse Overlay" icon (2nd from right) to preview a scene
++ Download files: Bulk download "bundle" to get all channels and metadata.
+  + Add to basket, start order, etc.
+
+For the example below, I downloaded
+| File                                         |       Date | Satellite |
+|----------------------------------------------+------------+-----------|
+| LC08_L1TP_061018_20260411_20260411_02_RT.tar | 2026-04-11 | LC08      |
+| LC08_L1TP_061018_20260222_20260227_02_T1.tar | 2026-02-22 | LC08      |
+
+The code below should work for Landsat 9 data too.
+
+** NOTDONE Alaska coastline near Yakutat
+
+https://gis.data.alaska.gov/datasets/SOA-DNR::alaska-coastline/explore?layer=4&location=59.805037%2C-139.368179%2C10
+
+Download coastline used later to partition land vs water where we know it (we don't know it where the glacier front moves, but will use color to guess).
+
+This does not work because of issues with the data - not well aligned with the coast. Instead we'll use a high resolution DEM to find flat (water) and define the coast that way.
+
+** ArcticDEM
+
+Use a 2 m DEM to calculate slopes to help build a land/water mask. Download appropriate 2 m tile (43_07_2_2_2m_v4.1) from https://data.pgc.umn.edu/elev/dem/setsm/ArcticDEM/. 
 
 * Processing
 
 The following GRASS GIS scripts
-+ Use downscaling to convert 90 m thermal band to 15 m
-+ Generate some masks of land, water, and ice
-+ Use masks to display a multi-colored graphic
++ Use pansharpening to convert 30 m RGB bands to 15 m.
++ Generate some masks of land, water, and ice.
++ Display a graphic.
 
 The same effect could be generated using QGIS and a mouse, Python, or many other languages.
 
+** Untar files
 
+#+BEGIN_SRC bash
+mkdir LC08_L1TP_061018_20260411_20260411_02_RT
+tar xvf LC08_L1TP_061018_20260411_20260411_02_RT.tar -C LC08_L1TP_061018_20260411_20260411_02_RT
+
+mkdir LC08_L1TP_061018_20260222_20260227_02_T1
+tar xvf LC08_L1TP_061018_20260222_20260227_02_T1.tar -C LC08_L1TP_061018_20260222_20260227_02_T1
+#+END_SRC
+
+** Set up GRASS
+
+#+BEGIN_SRC bash
+ID=LC08_L1TP_061018_20260411_20260411_02_RT
+
+# Set up and exit based on one GeoTIFF
+grass -e -c ./${ID}/${ID}_B8.TIF ./G # use 15 m band
+
+# enter GRASS
+grass ./G/PERMANENT
+#+END_SRC
+
+** Import bands
+
+#+BEGIN_SRC bash
+IDs=(LC08_L1TP_061018_20260411_20260411_02_RT LC08_L1TP_061018_20260222_20260227_02_T1)
+for ID in ${IDs[*]}; do
+  g.mapset -c ${ID}
+  for band in $(seq 11); do
+    geotiff=$(ls ${ID}/${ID}*B${band}.TIF)
+    r.external input=${geotiff} output=B${band}
+  done
+done
+#+END_SRC
+
+** Zoom in to a few regions and save them
+
++ YAK :: Region showing Yakutat, edge of Hubbard, and all of Russel Fjord
++ GPH :: Gilbert Point, Haenke Island, and the calving front
++ GP :: Gilbert point up close
+
+#+BEGIN_SRC bash
+# display, manually zoom
+g.mapset PERMANENT
+
+d.mon wx0
+d.rgb red=B4@${ID} green=B3@${ID} blue=B2@${ID}
+
+# after zooming in GUI, select ZOOM icon and "Set computational region extent from display". Then...
+
+g.region -fgp
+g.region -s -fgp n=6663780 s=6586110 w=554790 e=618885 nsres=15 ewres=15 rows=5178 cols=4273 save=YAK # save as DEFAULT region
+
+g.region -fgp
+g.region n=6660195 s=6647145 w=572040 e=593610 nsres=15 ewres=15 rows=870 cols=1438 save=GPH
+
+g.region -fgp
+g.region -fgp n=6653580 s=6649905 w=581610 e=587685 nsres=15 ewres=15 rows=245 cols=405 save=GP
+
+# zoom out to largest region
+g.region -fgp -d
+#+END_SRC
+
+** Import DEM
+
+#+BEGIN_SRC bash
+g.mapset -c DEM
+
+g.region -fgp -d
+
+# Reprojecting takes a while
+r.import extent=region memory=4096 input=${DATADIR}/ArcticDEM/valerie_2m/43_07_2_2_2m_v4.1_dem.tif output=d0 
+
+r.import extent=region memory=4096 input=${DATADIR}/ArcticDEM/valerie_2m/43_08_2_1_2m_v4.1_dem.tif output=d1 
+
+g.region res=2
+
+r.patch input=d0,d1 output=DEM
+
+r.slope.aspect -e elevation=DEM slope=slope aspect=aspect
+
+#+END_SRC
+
+We'll use flat slope to find water. But individual pixels in mountain areas may still be flat, so a spatial smooth might help.
+
+#+BEGIN_SRC bash
+r.neighbors input=slope output=slope_smoothed method=average size=5
+
+r.mapcalc "water = if(slope_smoothed < 0.1, 1, 0)"
+
+# r.resamp.filter input=slope output=slope_gauss filter=gauss radius=3 ?
+# r.resamp.rst ?
+#+END_SRC
+
+
+** NOTDONE Downscale (pansharpen)
+
+RGB = 432
+Thermal = 10
+
+#+BEGIN_SRC bash
+for ID in ${IDs[*]}; do
+  g.mapset ${ID}
+
+  # pan sharpening only works with scaled data. Lose some fidelity here...
+  r.rescale input=B4 output=B4_rescale to=0,255
+  r.rescale input=B3 output=B3_rescale to=0,255
+  r.rescale input=B2 output=B2_rescale to=0,255
+  r.rescale input=B8 output=B8_rescale to=0,255
+  r.rescale input=B10 output=B10_rescale to=0,255
+
+  i.pansharpen -l red=B4_rescale green=B3_rescale blue=B2_rescale pan=B8_rescale output=pan method=ihs
+  i.pansharpen -l red=B4_rescale green=B3_rescale blue=B2_rescale pan=B8_rescale output=pan method=pca
+  i.pansharpen -l red=B4_rescale green=B3_rescale blue=B2_rescale pan=B8_rescale output=pan method=brovey
+  # i.pansharpen -l red=B10_rescale green=B10_rescale blue=B10_rescale pan=B8_rescale output=pan_thermal method=brovey
+done
+#+END_SRC
+
+Check...
+#+BEGIN_SRC bash
+d.mon wx0
+d.erase
+# d.rgb red=pan_ihs_red green=pan_ihs_green blue=pan_ihs_blue
+# d.rgb red=pan_pca_red green=pan_pca_green blue=pan_pca_blue
+d.rgb red=pan_red green=pan_green blue=pan_blue
+# d.rgb red=pan_thermal_red green=pan_thermal_green blue=pan_thermal_blue
+#+END_SRC
+
+** Enhance RGB
+
+#+BEGIN_SRC bash
+for ID in ${IDs[*]}; do
+  g.mapset ${ID}
+  i.colors.enhance -p strength=70 red=B4 green=B3 blue=B2
+done
+#+END_SRC
+
+
+
+
+
+** Display
+
+#+BEGIN_SRC bash
+for ID in ${IDs[*]}; do # Landsat scenes
+  g.mapset mapset=${ID}
+  g.region -d
+  for r in GP GPH YAK; do # regions
+    png=${r}_${ID}.png
+    rm ${png}
+
+    g.region ${r}
+    eval $(g.region -fgp)
+    if [[ ${r} != "YAK" ]]; then
+      rows=$(( ${rows} * 4 ))
+      cols=$(( ${cols} * 4 ))
+    fi
+    
+    d.mon start=png output=${png} width=${cols} height=${rows} resolution=1
+    d.rgb red=B4 green=B3 blue=B2
+    d.mon stop=png
+  done # region
+done # Landsat
+say done
+# o *.png
+#+END_SRC
+
+** Convert to temperature
+
+Compute top of atmosphere radiance
+
+#+BEGIN_SRC bash
+for ID in ${IDs[*]}; do
+  g.mapset ${ID}
+  g.region -d # set to default (wide; YAK) region
+
+  # needs some missing bands to run that were not provided in tar-file. Create then delete.
+  r.mapcalc "B8 = B7"
+  r.mapcalc "B9 = B7"
+  r.mapcalc "B11 = B7"
+  
+  i.landsat.toar input=B output=radiance_B metfile=${ID}/${ID}_MTL.txt sensor=oli8
+
+  r.mapcalc "temp_degC = radiance_B10 - 273.15"
+  # r.contour input="temp_degC" output=temp_degC levels=-2,-1,0,1,2,3,4 --o
+done
+#+END_SRC
+
+
+** Display
+
+#+BEGIN_SRC bash
+for ID in ${IDs[*]}; do # Landsat scenes
+  g.mapset mapset=${ID}
+  g.region -fpgd 
+
+  r.mask raster=water@DEM maskcats=1
+  r.mapcalc "temp_degC_water = temp_degC"
+  r.colors -n map=temp_degC_water color=plasma
+  r.mask -r
+
+  for r in GP GPH YAK; do # regions
+    png=water_${r}_${ID}.png
+    rm ${png}
+
+    g.region ${r}
+    eval $(g.region -fgp)
+    if [[ ${r} != "YAK" ]]; then
+      rows=$(( ${rows} * 4 ))
+      cols=$(( ${cols} * 4 ))
+    fi
+    
+    d.mon start=png output=${png} width=${cols} height=${rows} resolution=1
+    d.rgb red=B4 green=B3 blue=B2
+    d.rast temp_degC_water
+    d.mon stop=png
+  done # region
+done # Landsat
+say done
+#+END_SRC
