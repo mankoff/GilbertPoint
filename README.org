@@ -1,0 +1,11 @@
+
+* Table of contents                               :toc_3:noexport:
+- [[#introduction][Introduction]]
+
+* Introduction
+
+This repository contains some workbooks for Gilbert Point, Hubbard, and Valerie glacier work.
+
++ [[./LANDSAT.org]] :: Landsat imagery (15 m) including estimates of water temperature. Shows a workflow that includes downloading and processing.
+
++ [[./Sentinel.org]] :: Very short introduction to Sentinel web viewer. Demonstrates measuring the distance between Gilbert Point and Hubbard Glacier.
