@@ -3,6 +3,7 @@
 - [[#intro][Intro]]
 - [[#fetch-data][Fetch data]]
   - [[#landsat][Landsat]]
+    - [[#note-auto-fetch][NOTE Auto fetch]]
   - [[#notdone-alaska-coastline-near-yakutat][NOTDONE Alaska coastline near Yakutat]]
   - [[#arcticdem][ArcticDEM]]
 - [[#processing][Processing]]
@@ -48,6 +49,10 @@ For the example below, I downloaded
 | LC08_L1TP_061018_20260222_20260227_02_T1.tar | 2026-02-22 | LC08      |
 
 The code below should work for Landsat 9 data too.
+
+*** NOTE Auto fetch
+
+Note that when viewing Results at https://earthexplorer.usgs.gov/, there is a button to "Submit Standing Request" which can be configured to email you (hourly, daily, etc.) whenever new images appear that meet your search criteria.
 
 ** NOTDONE Alaska coastline near Yakutat
 
