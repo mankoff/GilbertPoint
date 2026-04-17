@@ -19,6 +19,10 @@
 
 * Intro
 
+[[./water_YAK_LC08_L1TP_061018_20260222_20260227_02_T1.png]]
+
+[[./GP_LC08_L1TP_061018_20260411_20260411_02_RT.png]]
+
 * Fetch data
 
 ** Landsat
@@ -233,6 +237,8 @@ say done
 # o *.png
 #+END_SRC
 
+[[./GP_LC08_L1TP_061018_20260411_20260411_02_RT.png]]
+
 ** Convert to temperature
 
 Compute top of atmosphere radiance
@@ -286,3 +292,5 @@ for ID in ${IDs[*]}; do # Landsat scenes
 done # Landsat
 say done
 #+END_SRC
+
+[[./water_YAK_LC08_L1TP_061018_20260222_20260227_02_T1.png]]
